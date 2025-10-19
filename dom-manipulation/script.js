@@ -474,16 +474,16 @@ function initializeApp() {
 // Run the initialization function when the page loads
 initializeApp();
 
-  // Global quotes array - Initialized by loading from Local Storage
+ // Global quotes array - Initialized by loading from Local Storage
 let quotes = [];
 
 const LOCAL_STORAGE_KEY = 'quoteGeneratorQuotes';
-const MOCK_API_URL_POSTS = 'https://jsonplaceholder.typicode.com/posts'; // Endpoint for POST
+const MOCK_API_URL_POSTS = 'https://jsonplaceholder.typicode.com/posts'; 
 const MOCK_API_URL_GET = 'https://jsonplaceholder.typicode.com/posts?_limit=5'; 
-const SYNC_INTERVAL_MS = 60000; 
+const SYNC_INTERVAL_MS = 60000; // 60 seconds
 
 // ======================================
-// Data Persistence Functions (Unchanged)
+// Data Persistence Functions
 // ======================================
 
 function loadQuotes() {
@@ -498,7 +498,7 @@ function saveQuotes() {
 }
 
 // ======================================
-// Server Communication (Task 3 & POST)
+// Server Communication & Syncing
 // ======================================
 
 function getQuoteId(quote) {
@@ -507,25 +507,21 @@ function getQuoteId(quote) {
 
 /**
  * Uploads a single local quote to the server using the POST method.
- * Includes required method and headers.
- * @param {object} quote - The quote object to upload.
+ * (Included for full sync capability).
  */
 async function uploadQuoteToServer(quote) {
-    // Map your quote object to the server's expected post structure
     const payload = {
         title: quote.text,
         body: `Author: ${quote.author}, Category: ${quote.category}`,
-        userId: 1, // Placeholder user ID
+        userId: 1, 
     };
 
     try {
         const response = await fetch(MOCK_API_URL_POSTS, {
-            // --- REQUIRED PARAMETERS ---
             method: 'POST', 
             headers: { 
                 'Content-Type': 'application/json' 
             },
-            // ---------------------------
             body: JSON.stringify(payload)
         });
 
@@ -534,14 +530,10 @@ async function uploadQuoteToServer(quote) {
         }
 
         const serverResponse = await response.json();
-        console.log("Quote uploaded successfully. Server response:", serverResponse);
-        
-        // In a real app, you would use serverResponse.id to update the local quote's ID
         return serverResponse; 
 
     } catch (error) {
         console.error("Error during quote upload:", error);
-        // In a real app, mark the quote as 'pending upload' for later retry
         return null;
     }
 }
@@ -550,7 +542,6 @@ async function uploadQuoteToServer(quote) {
  * Fetches quote data from the simulated server (JSONPlaceholder /posts).
  */
 async function fetchQuotesFromServer() {
-    // ... (This function remains as implemented in the previous step, using MOCK_API_URL_GET)
     try {
         const response = await fetch(MOCK_API_URL_GET);
         if (!response.ok) {
@@ -572,23 +563,12 @@ async function fetchQuotesFromServer() {
 }
 
 /**
- * Syncs local quotes with server data (using server wins).
+ * Syncs local quotes with server data using a "server wins" conflict resolution.
  */
 async function syncQuotes() {
     console.log("Starting data sync...");
-    // ... (Logic for merging/conflict resolution remains the same)
-    
-    // NOTE: In a complete implementation, you would check for and upload 
-    // any *new local quotes* here before or after fetching.
-    
-    // Example: Find a new local quote and upload it
-    const newLocalQuote = quotes.find(q => q.id.toString().startsWith('local-'));
-    if (newLocalQuote) {
-        // await uploadQuoteToServer(newLocalQuote);
-    }
     
     const serverQuotes = await fetchQuotesFromServer();
-    // ... rest of the merge/notification logic ...
     
     const localQuotesMap = new Map();
     quotes.forEach(quote => {
@@ -598,11 +578,57 @@ async function syncQuotes() {
     let mergedQuotes = [];
     let conflictsResolved = 0;
 
+    // 1. Process Server Quotes (Server Wins Conflict Resolution)
     serverQuotes.forEach(serverQuote => {
         const serverId = getQuoteId(serverQuote);
+        
         if (localQuotesMap.has(serverId)) {
+            // Server data overrides local data
             localQuotesMap.delete(serverId); 
             mergedQuotes.push(serverQuote);
             conflictsResolved++;
         } else {
+            // New quote from server
             mergedQuotes.push(serverQuote);
+        }
+    });
+
+    // 2. Add remaining local-only quotes
+    localQuotesMap.forEach(localQuote => {
+        mergedQuotes.push(localQuote); 
+    });
+
+    // 3. Update global array and local storage
+    quotes = mergedQuotes;
+    saveQuotes();
+    
+    // 4. Update UI and notify user
+    const notification = document.getElementById('sync-notification');
+    if (notification) {
+        if (conflictsResolved > 0) {
+            notification.textContent = `Sync Complete: ${conflictsResolved} conflicts resolved (Server Wins).`;
+        } else {
+            notification.textContent = `Sync Complete: Data is up-to-date.`;
+        }
+        notification.classList.add('show');
+        setTimeout(() => notification.classList.remove('show'), 3000);
+    }
+    
+    console.log(`Sync complete. Total quotes: ${quotes.length}. Conflicts resolved: ${conflictsResolved}`);
+}
+
+// ======================================
+// Initialization and Automation
+// ======================================
+
+document.addEventListener('DOMContentLoaded', () => {
+    // 1. Load initial data
+    loadQuotes(); 
+    
+    // 2. Run an initial sync immediately
+    syncQuotes(); 
+    
+    // 3. Set up periodic sync using setInterval
+    // CRUCIAL: Call syncQuotes function every 60 seconds (60000 ms)
+    setInterval(syncQuotes, SYNC_INTERVAL_MS);
+});
