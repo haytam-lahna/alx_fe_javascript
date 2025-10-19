@@ -358,4 +358,118 @@ loadQuotes();
 const lastIndex = loadLastViewedQuote();
 if (lastIndex !== null) {
     console.log(`Last viewed quote index: ${lastIndex}`);
+
+  // Assume 'quotes' array and storage functions (loadQuotes, saveQuotes) exist from Task 1
+// Each quote object must now have a 'category' property, e.g., { text: "...", author: "...", category: "Inspiration" }
+
+const LOCAL_STORAGE_FILTER_KEY = 'quoteFilterPreference';
+
+// ======================================
+// Filter and Category Management
+// ======================================
+
+/**
+ * Extracts unique categories from the quotes array and populates the filter dropdown.
+ */
+function populateCategories() {
+    const filterElement = document.getElementById('categoryFilter');
     
+    // Clear existing options (except "All Categories")
+    filterElement.innerHTML = '<option value="all">All Categories</option>';
+
+    // 1. Get unique categories
+    // Map over quotes to get all categories, then use a Set to get only unique values
+    const categories = [...new Set(quotes.map(quote => quote.category))];
+
+    // 2. Populate the dropdown
+    categories.forEach(category => {
+        if (category) { // Ensure category is not empty or null
+            const option = document.createElement('option');
+            option.value = category;
+            option.textContent = category;
+            filterElement.appendChild(option);
+        }
+    });
+
+    // 3. Restore the last selected filter preference from local storage
+    restoreFilterPreference();
+}
+
+/**
+ * Filters the displayed quotes based on the selected category from the dropdown.
+ */
+function filterQuotes() {
+    const filterElement = document.getElementById('categoryFilter');
+    const selectedCategory = filterElement.value;
+
+    // 1. Save preference to Local Storage
+    localStorage.setItem(LOCAL_STORAGE_FILTER_KEY, selectedCategory);
+
+    // 2. Determine which quotes to display
+    let filteredQuotes;
+    if (selectedCategory === 'all') {
+        filteredQuotes = quotes;
+    } else {
+        filteredQuotes = quotes.filter(quote => quote.category === selectedCategory);
+    }
+    
+    // 3. Update the DOM
+    // This function needs to be implemented by you based on how your quotes are displayed.
+    // displayQuotes(filteredQuotes); 
+    
+    // Placeholder console output for demonstration
+    console.log(`Filtering by: ${selectedCategory}. Displaying ${filteredQuotes.length} quotes.`);
+    // alert(`Displaying ${filteredQuotes.length} quotes for category "${selectedCategory}"`);
+}
+
+/**
+ * Restores the user's last selected filter preference from local storage.
+ */
+function restoreFilterPreference() {
+    const filterElement = document.getElementById('categoryFilter');
+    const lastFilter = localStorage.getItem(LOCAL_STORAGE_FILTER_KEY);
+
+    if (lastFilter) {
+        // Set the dropdown value and immediately apply the filter
+        filterElement.value = lastFilter;
+        filterQuotes(); // Apply the filter based on the restored value
+    } else {
+        // If no preference is saved, ensure "All Categories" is selected and applied
+        filterElement.value = 'all';
+        filterQuotes();
+    }
+}
+
+
+// ======================================
+// Updated addQuote and Initialization
+// ======================================
+
+// Assume the existing addQuote function is updated to include category
+function addQuote(quoteText, quoteAuthor, quoteCategory) {
+    const newQuote = { 
+        text: quoteText, 
+        author: quoteAuthor, 
+        category: quoteCategory || 'Uncategorized', // Ensure category exists
+        id: Date.now() 
+    };
+    quotes.push(newQuote);
+    saveQuotes();
+    
+    // CRUCIAL: Re-populate categories after a new one is added
+    populateCategories();
+}
+
+// Ensure populateCategories is called after quotes are loaded on startup
+function initializeApp() {
+    loadQuotes(); // Load quotes from local storage (from Task 1)
+    
+    // Now that quotes are loaded, populate the filter dropdown
+    populateCategories(); 
+    
+    // The call to restoreFilterPreference() is inside populateCategories,
+    // which then calls filterQuotes() to display the correct set of quotes.
+}
+
+// Run the initialization function when the page loads
+initializeApp();
