@@ -478,11 +478,12 @@ initializeApp();
 let quotes = [];
 
 const LOCAL_STORAGE_KEY = 'quoteGeneratorQuotes';
-const MOCK_API_URL = 'https://jsonplaceholder.typicode.com/todos?_limit=5'; 
+// --- UPDATED MOCK API URL ---
+const MOCK_API_URL = 'https://jsonplaceholder.typicode.com/posts?_limit=5'; 
 const SYNC_INTERVAL_MS = 60000; // 60 seconds
 
 // ======================================
-// Data Persistence Functions (from Task 1)
+// Data Persistence Functions
 // ======================================
 
 function loadQuotes() {
@@ -497,17 +498,16 @@ function saveQuotes() {
 }
 
 // ======================================
-// Syncing and Conflict Resolution (Task 3)
+// Syncing and Conflict Resolution
 // ======================================
 
 function getQuoteId(quote) {
-    // Uses the existing ID or creates a unique client-side one
+    // Ensures unique ID generation for server and local items
     return quote.id.toString().startsWith('server-') ? quote.id : `local-${quote.id}`;
 }
 
 /**
- * Fetches quote data from the simulated server.
- * This function is renamed as required by the prompt.
+ * Fetches quote data from the simulated server (JSONPlaceholder /posts).
  * @returns {Promise<Array>} A promise that resolves to an array of server quotes.
  */
 async function fetchQuotesFromServer() {
@@ -518,12 +518,13 @@ async function fetchQuotesFromServer() {
         }
         const data = await response.json();
         
-        // Map the mock API data to your required quote structure
+        // --- UPDATED DATA MAPPING for /posts endpoint ---
         return data.map(item => ({
-            id: `server-${item.id}`, // Ensure server IDs are clearly distinguishable
-            text: item.title, 
+            id: `server-${item.id}`,
+            text: item.title, // Post title becomes quote text
             author: `User ${item.userId}`,
-            category: item.completed ? 'Completed' : 'Pending',
+            // Post body can be used for category/metadata, or a simple placeholder
+            category: item.body.length > 50 ? 'Long Quote' : 'Short Quote',
             timestamp: Date.now()
         }));
     } catch (error) {
@@ -538,7 +539,6 @@ async function fetchQuotesFromServer() {
 async function syncQuotes() {
     console.log("Starting data sync...");
     
-    // 1. Fetch server quotes using the required function name
     const serverQuotes = await fetchQuotesFromServer();
     
     const localQuotesMap = new Map();
@@ -564,7 +564,7 @@ async function syncQuotes() {
         }
     });
 
-    // 3. Add remaining local-only quotes (new items created offline)
+    // 3. Add remaining local-only quotes
     localQuotesMap.forEach(localQuote => {
         mergedQuotes.push(localQuote); 
     });
@@ -586,9 +586,6 @@ async function syncQuotes() {
     }
     
     console.log(`Sync complete. Total quotes: ${quotes.length}. Conflicts resolved: ${conflictsResolved}`);
-    
-    // NOTE: You would call your populateCategories() and displayQuotes() here 
-    // to refresh the UI after the sync.
 }
 
 
@@ -597,12 +594,8 @@ async function syncQuotes() {
 // ======================================
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Load initial data
     loadQuotes(); 
-    
-    // Run an initial sync
     syncQuotes(); 
     
-    // Set up periodic sync
     setInterval(syncQuotes, SYNC_INTERVAL_MS);
 });
