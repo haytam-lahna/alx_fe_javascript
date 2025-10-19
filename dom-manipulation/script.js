@@ -493,3 +493,90 @@ function getQuoteId(quote) {
 function saveQuotes() {
     localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(quotes));
 }
+/**
+ * Fetches quote data from the simulated server.
+ * @returns {Promise<Array>} A promise that resolves to an array of server quotes.
+ */
+async function fetchServerQuotes() {
+    try {
+        const response = await fetch(MOCK_API_URL);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        
+        // Map the generic JSONPlaceholder data to your quote object structure
+        return data.map(item => ({
+            id: item.id, // Server ID
+            text: item.title, // Use title as quote text
+            author: `User ${item.userId}`, // Use userId as author
+            category: item.completed ? 'Completed' : 'Pending', // Use completed status as category
+            isServer: true, // Flag to identify server data
+            timestamp: Date.now() // Simple timestamp for conflict comparison
+        }));
+    } catch (error) {
+        console.error("Error fetching server quotes:", error);
+        return [];
+    }
+}
+
+/**
+ * Syncs local quotes with server data using a "server wins" conflict resolution.
+ */
+async function syncQuotes() {
+    console.log("Starting data sync...");
+    
+    const serverQuotes = await fetchServerQuotes();
+    const localQuotesMap = new Map();
+    
+    // 1. Create a map of local quotes for easy lookup
+    quotes.forEach(quote => {
+        localQuotesMap.set(getQuoteId(quote), quote);
+    });
+
+    // New merged array
+    let mergedQuotes = [];
+    let conflictsResolved = 0;
+
+    // 2. Process Server Quotes (Server Wins)
+    serverQuotes.forEach(serverQuote => {
+        const serverId = getQuoteId(serverQuote);
+        
+        // If the quote exists locally, the server's version takes precedence.
+        if (localQuotesMap.has(serverId)) {
+            // Conflict Resolution: Server data overrides local data
+            localQuotesMap.delete(serverId); // Remove from map so it's not added as a new local quote
+            mergedQuotes.push(serverQuote);
+            conflictsResolved++;
+        } else {
+            // New quote from server
+            mergedQuotes.push(serverQuote);
+        }
+    });
+
+    // 3. Add remaining *local-only* quotes
+    // Any remaining quotes in localQuotesMap are new local quotes not yet on the server (or not fetched)
+    localQuotesMap.forEach(localQuote => {
+        // Only include local quotes if they aren't marked as pending upload
+        // In a real app, you would prioritize uploading these, but here we just keep them.
+        mergedQuotes.push(localQuote); 
+    });
+
+    // 4. Update global array and local storage
+    quotes = mergedQuotes;
+    saveQuotes();
+    
+    // 5. Update UI and notify user
+    // updateDOMDisplay(); // Call your function to display the merged list
+    
+    const notification = document.getElementById('sync-notification');
+    if (conflictsResolved > 0) {
+        notification.textContent = `Sync Complete: ${conflictsResolved} conflicts resolved (Server Wins).`;
+    } else {
+        notification.textContent = `Sync Complete: Data is up-to-date.`;
+    }
+    notification.classList.add('show');
+    setTimeout(() => notification.classList.remove('show'), 3000);
+    
+    console.log(`Sync complete. Total quotes: ${quotes.length}. Conflicts resolved: ${conflictsResolved}`);
+}
