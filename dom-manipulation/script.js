@@ -580,3 +580,14 @@ async function syncQuotes() {
     
     console.log(`Sync complete. Total quotes: ${quotes.length}. Conflicts resolved: ${conflictsResolved}`);
 }
+
+  // Start periodic sync (e.g., every 60 seconds)
+const SYNC_INTERVAL_MS = 60000; // 60 seconds
+
+document.addEventListener('DOMContentLoaded', () => {
+    // Initial sync on page load
+    syncQuotes(); 
+    
+    // Set up periodic sync
+    setInterval(syncQuotes, SYNC_INTERVAL_MS);
+});
