@@ -24,6 +24,24 @@
       font-size: 1.2em;
       font-style: italic;
     }
+    .notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background-color: #4CAF50;
+    color: white;
+    padding: 15px;
+    border-radius: 5px;
+    z-index: 1000;
+    opacity: 0;
+    transition: opacity 0.5s, transform 0.5s;
+    transform: translateY(-50px);
+}
+
+.notification.show {
+    opacity: 1;
+    transform: translateY(0);
+}
   </style>
 </head>
 <body>
