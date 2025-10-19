@@ -474,13 +474,13 @@ function initializeApp() {
 // Run the initialization function when the page loads
 initializeApp();
 
- // Global quotes array - Initialized by loading from Local Storage
+// Global quotes array - Initialized by loading from Local Storage
 let quotes = [];
 
 const LOCAL_STORAGE_KEY = 'quoteGeneratorQuotes';
 const MOCK_API_URL_POSTS = 'https://jsonplaceholder.typicode.com/posts'; 
 const MOCK_API_URL_GET = 'https://jsonplaceholder.typicode.com/posts?_limit=5'; 
-const SYNC_INTERVAL_MS = 60000; // 60 seconds
+const SYNC_INTERVAL_MS = 60000; 
 
 // ======================================
 // Data Persistence Functions
@@ -507,7 +507,6 @@ function getQuoteId(quote) {
 
 /**
  * Uploads a single local quote to the server using the POST method.
- * (Included for full sync capability).
  */
 async function uploadQuoteToServer(quote) {
     const payload = {
@@ -605,11 +604,9 @@ async function syncQuotes() {
     // 4. Update UI and notify user
     const notification = document.getElementById('sync-notification');
     if (notification) {
-        if (conflictsResolved > 0) {
-            notification.textContent = `Sync Complete: ${conflictsResolved} conflicts resolved (Server Wins).`;
-        } else {
-            notification.textContent = `Sync Complete: Data is up-to-date.`;
-        }
+        // --- REQUIRED NOTIFICATION MESSAGE ---
+        notification.textContent = "Quotes synced with server!";
+        // -------------------------------------
         notification.classList.add('show');
         setTimeout(() => notification.classList.remove('show'), 3000);
     }
@@ -622,13 +619,8 @@ async function syncQuotes() {
 // ======================================
 
 document.addEventListener('DOMContentLoaded', () => {
-    // 1. Load initial data
     loadQuotes(); 
-    
-    // 2. Run an initial sync immediately
     syncQuotes(); 
     
-    // 3. Set up periodic sync using setInterval
-    // CRUCIAL: Call syncQuotes function every 60 seconds (60000 ms)
     setInterval(syncQuotes, SYNC_INTERVAL_MS);
 });
