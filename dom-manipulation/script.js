@@ -5,8 +5,8 @@ let quotes = [
   { text: "Success is not for the lazy.", category: "Success" }
 ];
 
-// Display Random Quote
-function displayRandomQuote() {
+// Show Random Quote
+function showRandomQuote() {
   const quoteDisplay = document.getElementById("quoteDisplay");
   const randomIndex = Math.floor(Math.random() * quotes.length);
   const randomQuote = quotes[randomIndex];
@@ -35,4 +35,5 @@ function addQuote() {
   document.getElementById("newQuoteCategory").value = "";
 }
 
-document.getElementById("newQuote").addEventListener("click", displayRandomQuote);
+// Event listener for "Show New Quote" button
+document.getElementById("newQuote").addEventListener("click", showRandomQuote);
