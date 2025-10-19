@@ -474,30 +474,43 @@ function initializeApp() {
 // Run the initialization function when the page loads
 initializeApp();
 
-  // Assume this is part of your main JavaScript file
-// Global quotes array (from Task 1)
-let quotes = []; 
+  // Global quotes array - Initialized by loading from Local Storage
+let quotes = [];
 
-// Mock Server Endpoint (Using JSONPlaceholder /todos for simplicity, as posts are often too long)
+const LOCAL_STORAGE_KEY = 'quoteGeneratorQuotes';
 const MOCK_API_URL = 'https://jsonplaceholder.typicode.com/todos?_limit=5'; 
-const LOCAL_STORAGE_KEY = 'quoteGeneratorQuotes'; 
+const SYNC_INTERVAL_MS = 60000; // 60 seconds
 
-// Function to get a unique identifier for a quote (simulating a server ID)
-function getQuoteId(quote) {
-    // In a real app, this would be a server-generated ID. 
-    // For JSONPlaceholder, we use the 'id'. For local quotes, we use 'local-' + timestamp.
-    return quote.id.toString().startsWith('local-') ? quote.id : `server-${quote.id}`;
+// ======================================
+// Data Persistence Functions (from Task 1)
+// ======================================
+
+function loadQuotes() {
+    const storedQuotes = localStorage.getItem(LOCAL_STORAGE_KEY);
+    if (storedQuotes) {
+        quotes = JSON.parse(storedQuotes);
+    }
 }
 
-// Function to save local quotes (from Task 1)
 function saveQuotes() {
     localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(quotes));
 }
+
+// ======================================
+// Syncing and Conflict Resolution (Task 3)
+// ======================================
+
+function getQuoteId(quote) {
+    // Uses the existing ID or creates a unique client-side one
+    return quote.id.toString().startsWith('server-') ? quote.id : `local-${quote.id}`;
+}
+
 /**
  * Fetches quote data from the simulated server.
+ * This function is renamed as required by the prompt.
  * @returns {Promise<Array>} A promise that resolves to an array of server quotes.
  */
-async function fetchServerQuotes() {
+async function fetchQuotesFromServer() {
     try {
         const response = await fetch(MOCK_API_URL);
         if (!response.ok) {
@@ -505,14 +518,13 @@ async function fetchServerQuotes() {
         }
         const data = await response.json();
         
-        // Map the generic JSONPlaceholder data to your quote object structure
+        // Map the mock API data to your required quote structure
         return data.map(item => ({
-            id: item.id, // Server ID
-            text: item.title, // Use title as quote text
-            author: `User ${item.userId}`, // Use userId as author
-            category: item.completed ? 'Completed' : 'Pending', // Use completed status as category
-            isServer: true, // Flag to identify server data
-            timestamp: Date.now() // Simple timestamp for conflict comparison
+            id: `server-${item.id}`, // Ensure server IDs are clearly distinguishable
+            text: item.title, 
+            author: `User ${item.userId}`,
+            category: item.completed ? 'Completed' : 'Pending',
+            timestamp: Date.now()
         }));
     } catch (error) {
         console.error("Error fetching server quotes:", error);
@@ -526,26 +538,24 @@ async function fetchServerQuotes() {
 async function syncQuotes() {
     console.log("Starting data sync...");
     
-    const serverQuotes = await fetchServerQuotes();
-    const localQuotesMap = new Map();
+    // 1. Fetch server quotes using the required function name
+    const serverQuotes = await fetchQuotesFromServer();
     
-    // 1. Create a map of local quotes for easy lookup
+    const localQuotesMap = new Map();
     quotes.forEach(quote => {
         localQuotesMap.set(getQuoteId(quote), quote);
     });
 
-    // New merged array
     let mergedQuotes = [];
     let conflictsResolved = 0;
 
-    // 2. Process Server Quotes (Server Wins)
+    // 2. Process Server Quotes (Server Wins Conflict Resolution)
     serverQuotes.forEach(serverQuote => {
         const serverId = getQuoteId(serverQuote);
         
-        // If the quote exists locally, the server's version takes precedence.
         if (localQuotesMap.has(serverId)) {
-            // Conflict Resolution: Server data overrides local data
-            localQuotesMap.delete(serverId); // Remove from map so it's not added as a new local quote
+            // Server data overrides local data
+            localQuotesMap.delete(serverId); 
             mergedQuotes.push(serverQuote);
             conflictsResolved++;
         } else {
@@ -554,11 +564,8 @@ async function syncQuotes() {
         }
     });
 
-    // 3. Add remaining *local-only* quotes
-    // Any remaining quotes in localQuotesMap are new local quotes not yet on the server (or not fetched)
+    // 3. Add remaining local-only quotes (new items created offline)
     localQuotesMap.forEach(localQuote => {
-        // Only include local quotes if they aren't marked as pending upload
-        // In a real app, you would prioritize uploading these, but here we just keep them.
         mergedQuotes.push(localQuote); 
     });
 
@@ -567,25 +574,33 @@ async function syncQuotes() {
     saveQuotes();
     
     // 5. Update UI and notify user
-    // updateDOMDisplay(); // Call your function to display the merged list
-    
     const notification = document.getElementById('sync-notification');
-    if (conflictsResolved > 0) {
-        notification.textContent = `Sync Complete: ${conflictsResolved} conflicts resolved (Server Wins).`;
-    } else {
-        notification.textContent = `Sync Complete: Data is up-to-date.`;
+    if (notification) {
+        if (conflictsResolved > 0) {
+            notification.textContent = `Sync Complete: ${conflictsResolved} conflicts resolved (Server Wins).`;
+        } else {
+            notification.textContent = `Sync Complete: Data is up-to-date.`;
+        }
+        notification.classList.add('show');
+        setTimeout(() => notification.classList.remove('show'), 3000);
     }
-    notification.classList.add('show');
-    setTimeout(() => notification.classList.remove('show'), 3000);
     
     console.log(`Sync complete. Total quotes: ${quotes.length}. Conflicts resolved: ${conflictsResolved}`);
+    
+    // NOTE: You would call your populateCategories() and displayQuotes() here 
+    // to refresh the UI after the sync.
 }
 
-  // Start periodic sync (e.g., every 60 seconds)
-const SYNC_INTERVAL_MS = 60000; // 60 seconds
+
+// ======================================
+// Initialization and Automation
+// ======================================
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Initial sync on page load
+    // Load initial data
+    loadQuotes(); 
+    
+    // Run an initial sync
     syncQuotes(); 
     
     // Set up periodic sync
