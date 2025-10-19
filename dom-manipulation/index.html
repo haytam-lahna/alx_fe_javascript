@@ -37,6 +37,13 @@
   <input id="newQuoteCategory" type="text" placeholder="Enter quote category">
   <button onclick="addQuote()">Add Quote</button>
 
+  <h3>Data Management</h3>
+<div>
+    <button onclick="exportToJsonFile()">Export Quotes (JSON)</button>
+
+    <label for="importFile">Import Quotes (JSON):</label>
+    <input type="file" id="importFile" accept=".json" onchange="importFromJsonFile(event)" />
+</div>
   <script src="script.js"></script>
 </body>
 </html>
