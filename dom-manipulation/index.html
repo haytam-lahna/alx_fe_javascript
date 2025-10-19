@@ -7,34 +7,35 @@
   <style>
     body {
       font-family: Arial, sans-serif;
-      padding: 20px;
+      max-width: 600px;
+      margin: 40px auto;
+      text-align: center;
+    }
+    input {
+      padding: 8px;
+      margin: 5px;
+    }
+    button {
+      padding: 10px 15px;
+      cursor: pointer;
     }
     #quoteDisplay {
       margin: 20px 0;
       font-size: 1.2em;
-      font-weight: bold;
-    }
-    #formContainer {
-      margin-top: 30px;
-    }
-    input {
-      margin: 5px 0;
-      display: block;
-      padding: 8px;
-      width: 250px;
-    }
-    button {
-      padding: 8px 15px;
-      cursor: pointer;
+      font-style: italic;
     }
   </style>
 </head>
 <body>
   <h1>Dynamic Quote Generator</h1>
-  <div id="quoteDisplay">Click below to show a random quote.</div>
+
+  <div id="quoteDisplay">Click below to see a random quote!</div>
   <button id="newQuote">Show New Quote</button>
 
-  <div id="formContainer"></div>
+  <h2>Add Your Own Quote</h2>
+  <input id="newQuoteText" type="text" placeholder="Enter a new quote">
+  <input id="newQuoteCategory" type="text" placeholder="Enter quote category">
+  <button onclick="addQuote()">Add Quote</button>
 
   <script src="script.js"></script>
 </body>
